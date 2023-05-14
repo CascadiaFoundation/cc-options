@@ -12,6 +12,7 @@ import "solmate/utils/FixedPointMathLib.sol";
 - add update treasury address
 - add redeem CC function for expired options
 - add advanced discount for veCC
+- add amount to write event or remove amount from logic
 */
 
 contract CascadiaOptions is ERC1155 {
@@ -46,6 +47,7 @@ contract CascadiaOptions is ERC1155 {
     error ExerciseAssetNotReceived();
     error OptionExpired(uint256, uint40);
     error OptionExerciseTooEarly(uint256, uint40);
+    error NotEnoughOptionsHeld(uint256, uint256);
     
     Option[] options;
     
@@ -63,9 +65,10 @@ contract CascadiaOptions is ERC1155 {
         uint96 exerciseAmount,
         uint40 exerciseTimestamp,
         uint40 expiryTimestamp,
-        address to
-    ) external {
-        if (!whitelistedWriters(msg.sender)) {
+        address to, 
+        uint256 amount
+    ) external payable {
+        if (!whitelistedWriters[msg.sender]) {
             revert WriterNotWhitelisted(msg.sender);
         }
         if (uint256(cascadiaAmount) != msg.value) {
@@ -78,7 +81,7 @@ contract CascadiaOptions is ERC1155 {
             exerciseTimestamp,
             expiryTimestamp
         ));
-        _mint(options.length -1, to);
+        _mint(to, options.length -1, amount, "");
         emit OptionWritten(
             options.length -1,
             cascadiaAmount,
@@ -87,15 +90,15 @@ contract CascadiaOptions is ERC1155 {
             exerciseTimestamp,
             expiryTimestamp,
             to
-        )
+        );
     }
     
     function exercise(uint256 optionId, uint256 amount) external {
-        Option option = Options[optionId];
+        Option memory option = options[optionId];
         if (option.expiryTimestamp <= block.timestamp) {
             revert OptionExpired(optionId, option.expiryTimestamp);
         }
-        if (optionRecord.exerciseTimestamp > block.timestamp) {
+        if (option.exerciseTimestamp > block.timestamp) {
             revert OptionExerciseTooEarly(optionId, option.exerciseTimestamp);
         }
         if (balanceOf[msg.sender][optionId] < amount) {
@@ -113,10 +116,10 @@ contract CascadiaOptions is ERC1155 {
             amount,
             msg.sender
         );
-        safeTransferETH(msg.sender, option.cascadiaAmount);
+        SafeTransferLib.safeTransferETH(msg.sender, option.cascadiaAmount);
     }
     
     function uri(uint256 optionId) override public view returns (string memory tokenUri) {
-        string tokenUri = "placeholder";
+        string memory tokenUri = "placeholder";
     }
 }
