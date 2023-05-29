@@ -3,4 +3,5 @@ pragma solidity >=0.8.0;
 
 interface IVotingEscrow {
     function deposit_for(address) external payable;
+    function create_cooldown_lock(uint256) external payable;
 }

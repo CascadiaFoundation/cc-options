@@ -77,20 +77,9 @@ contract CascadiaOptions is ERC1155, Owned {
         votingEscrow = IVotingEscrow(_votingEscrow);
     }
     
-    function updateTreasury(address newTreasury) public onlyOwner {
-        treasury = newTreasury;
-        emit TreasuryUpdated(newTreasury);
-    }
-    
-    function updateVeDiscount(uint256 newVeDiscount) public onlyOwner {
-        veDiscount = newVeDiscount;
-        emit VeDiscountUpdated(newVeDiscount);
-    }
-    
-    function updateVotingEscrow(address newVotingEscrow) public onlyOwner {
-        votingEscrow = IVotingEscrow(newVotingEscrow);
-        emit VotingEscrowUpdated(newVotingEscrow);
-    }
+    ///////////////////////////////////////////////////////////////////////////
+    // MAIN OPTION LOGIC                                                     //
+    ///////////////////////////////////////////////////////////////////////////
     
     function write(
         uint96 cascadiaAmount,
@@ -100,7 +89,7 @@ contract CascadiaOptions is ERC1155, Owned {
         uint40 expiryTimestamp,
         address to, 
         uint40 amount
-    ) external payable onlyOwner {
+    ) external payable {
         if (!whitelistedWriters[msg.sender]) {
             revert WriterNotWhitelisted(msg.sender);
         }
@@ -147,7 +136,7 @@ contract CascadiaOptions is ERC1155, Owned {
         SafeTransferLib.safeTransferFrom(
             ERC20(option.exerciseAsset), 
             msg.sender, 
-            address(this), 
+            treasury, 
             option.exerciseAmount * amount
         );
         emit OptionExercised(
@@ -188,6 +177,10 @@ contract CascadiaOptions is ERC1155, Owned {
         votingEscrow.deposit_for{value: option.cascadiaAmount * amount}(msg.sender);
     }
     
+    ///////////////////////////////////////////////////////////////////////////
+    // CONTRACT ADMIN FUNCTIONS                                              //
+    ///////////////////////////////////////////////////////////////////////////
+    
     function redeem(uint256 optionId) external onlyOwner {
         Option memory option = options[optionId];
         if (option.expiryTimestamp > block.timestamp) {
@@ -198,6 +191,25 @@ contract CascadiaOptions is ERC1155, Owned {
         }
         redeemedOptions[optionId] = true;
         SafeTransferLib.safeTransferETH(treasury, option.cascadiaAmount * option.supply);
+    }
+    
+    function updateTreasury(address newTreasury) public onlyOwner {
+        treasury = newTreasury;
+        emit TreasuryUpdated(newTreasury);
+    }
+    
+    function updateVeDiscount(uint256 newVeDiscount) public onlyOwner {
+        veDiscount = newVeDiscount;
+        emit VeDiscountUpdated(newVeDiscount);
+    }
+    
+    function updateVotingEscrow(address newVotingEscrow) public onlyOwner {
+        votingEscrow = IVotingEscrow(newVotingEscrow);
+        emit VotingEscrowUpdated(newVotingEscrow);
+    }
+    
+    function whitelistWriter(address writer, bool whitelisted) public onlyOwner {
+        whitelistedWriters[writer] = whitelisted;
     }
     
     function uri(uint256 optionId) override public view returns (string memory tokenUri) {
