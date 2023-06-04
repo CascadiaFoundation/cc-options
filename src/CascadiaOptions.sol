@@ -60,12 +60,12 @@ contract CascadiaOptions is ERC1155, Owned {
     error NotEnoughOptionsHeld(uint256, uint256);
     error OptionAlreadyRedeemed(uint256);
     
-    IVotingEscrow votingEscrow;
+    IVotingEscrow public votingEscrow;
     
     Option[] options;
     
-    mapping(address => bool) whitelistedWriters;
-    mapping(uint256 => bool) redeemedOptions;
+    mapping(address => bool) public whitelistedWriters;
+    mapping(uint256 => bool) public redeemedOptions;
     
     address public treasury;
     uint256 public veDiscount; // percentage
@@ -93,8 +93,8 @@ contract CascadiaOptions is ERC1155, Owned {
         if (!whitelistedWriters[msg.sender]) {
             revert WriterNotWhitelisted(msg.sender);
         }
-        if (uint256(cascadiaAmount) != msg.value) {
-            revert ValueMismatch(cascadiaAmount, msg.value);
+        if (uint256(cascadiaAmount * amount) != msg.value) {
+            revert ValueMismatch(cascadiaAmount * amount, msg.value);
         }
         options.push(Option(
             cascadiaAmount,
